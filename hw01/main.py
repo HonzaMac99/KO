@@ -39,7 +39,7 @@ with g.Env(params=opts) as env, g.Model(env=env) as m:
     # D = 2
 
     # # Default file names
-    # input_file = "call_center.txt"
+    # input_file = "in.txt"
     # output_file = "out.txt"
 
     with open(input_file, 'r') as f:
