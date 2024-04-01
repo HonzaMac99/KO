@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sys
 
-LAZY_CS = False
+LAZY_CS = True
 
 opts = {
     "WLSACCESSID": "62cd638b-d118-4fc1-b04d-624506c02ad3",
@@ -13,69 +13,63 @@ opts = {
 }
 
 
-def find_one_tour(edges):
+def get_tour(edges):
     tour = []
-    tour.append(edges[0])
-    start = edges[0][0]
-    temp = edges[0][1]
-    edges.remove(tour[0])
+    e_start = edges[0]
+    v_start, v_next = e_start
 
-    while True:
-        for edge in edges:
-            if edge[0] == temp:
-                tour.append(edge)
-                if edge[1] != start:
-                    temp = edge[1]
-                    edges.remove(edge)
-                    break
-                else:
-                    edges.remove(edge)
-                    return tour, edges
+    tour.append(e_start)
+    edges.remove(e_start)
+
+    found_tour = False
+    while not found_tour:
+        for e in edges:
+            if e[0] == v_next:
+                v_next = e[1]
+
+                tour.append(e)
+                edges.remove(e)
+
+                if v_next == v_start:
+                    found_tour = True
+                break
+
+    return tour, edges
 
 
-def find_shortest_tour(edges):
+def get_shortest_tour(edges):
     shortest_tour = []
+    min_len = np.inf
     while len(edges) > 1:
-        tour, edges = find_one_tour(edges)
-        if len(shortest_tour) == 0:
+        tour, edges = get_tour(edges)
+        if min_len > len(tour):             # <--- n: did mistake here
+            min_len = len(tour)
             shortest_tour = tour
-        else:
-            if len(tour) < len(shortest_tour):
-                shortest_tour = tour
     return shortest_tour
 
 
-def ParseInputFile(file):
-    with open(file) as f:
-        temp = f.readlines()
-    lines = []
-    for line in temp:
-        lines.append(map(int, line.split(" ")))
-    return lines
-
-
 def add_subtour_cstr(model, where):
-    # Callback is called when some event occur . The type of event is
-    # distinguished using argument ’’where ’ ’.
+    # Callback is called when some event occur. The type of event is
+    # distinguished using argument ’’where’’.
     # In this case , we want to perform something when an integer
     # solution is found , which corresponds to ’’GRB.Callback.MIPSOL ’’.
     if where == g.GRB.callback.MIPSOL:
-        # make a list of edges selected in the solution
-        selected = []
-        for i in range(n+1):
-            # Get the value of variable x[i, j] from the solution .
-            # You may also pass a list of variables to the method .
-            sol = model.cbGetSolution([model._xs[i, j] for j in range(n+1)])
-            selected += [(i,j) for j in range(n+1) if sol[j] > 0.5]
-        # find the shortest cycle in the selected edge list
-        tour = find_shortest_tour(selected)
-        if len(tour) < n:
-            # add a subtour elimination constraint
-            expr = 0
-            for i in range(len(tour)):
-                expr += model._xs[tour[i][0], tour[i][1]]
-            # Add lazy constraint to model .
-            model.cbLazy(expr <= len(tour)-1)
+        # Get the value of variable xs[i, j] from the solution.
+        # You may also pass a list of variables to the method.
+        val = model.cbGetSolution([model._xs[i, j] for i in range(n+1) for j in range(n+1)])
+        # print(np.array(val).reshape(n+1, n+1))
+
+        # make a list of edges that were enabled in the xs
+        es_active = [(i, j) for i in range(n+1) for j in range(n+1) if val[i*(n+1) + j] > 0.5]
+        # es_active = np.array(es_active)
+
+        # find the shortest cycle in the edge list
+        tour = get_shortest_tour(es_active)
+        tour_len = len(tour)
+
+        # Add lazy constraint to model that eliminates the subtour --> one of the xs in the tour must be 0
+        if tour_len < n+1:
+            model.cbLazy(g.quicksum(model._xs[tour[i]] for i in range(tour_len)) <= tour_len-1)
 
 
 def get_distances(stripes, n, w, h):
@@ -88,21 +82,30 @@ def get_distances(stripes, n, w, h):
     for i in range(n):
         for j in range(n):
             # dist = [last 3-column of i] - [first 3-column of j]
-            distances[i+1, j+1] = np.sum(np.abs(stripes[i, :, (w-1)*3:w*3] - stripes[j, :, 0:3]))
+            distances[i+1, j+1] = np.sum(np.abs(stripes[i, :, -3:] - stripes[j, :, 0:3]))
 
     return distances
+
+
+def print_var_arr(model_var, n):
+    a = np.zeros((n+1, n+1))
+    for i in range(n+1):
+        for j in range(n+1):
+            a[i, j] = model_var[i, j].X
+    print(a)
 
 
 # use the academic licence
 with g.Env(params=opts) as env, g.Model(env=env) as m:
     # model = g.Model()
 
-    # input_file = sys.argv[1]
-    # output_file = sys.argv[2]
-
-    # Default file names
-    input_file = "in.txt"
-    output_file = "out.txt"
+    if len(sys.argv) < 3:
+        # Default file names
+        input_file = "in.txt"
+        output_file = "out.txt"
+    else:
+        input_file = sys.argv[1]
+        output_file = sys.argv[2]
 
     stripes = []
 
@@ -121,66 +124,55 @@ with g.Env(params=opts) as env, g.Model(env=env) as m:
     bigM = np.sum(distances)*20
 
     # Model variables
-
-    # xs = {}
-    # for i in range(n):
-    #     for j in range(n):
-    #         xs[i, j] = m.addVar(vtype=g.GRB.BINARY, name=f"x{i}{j}")
     xs = m.addVars(n+1, n+1, vtype=g.GRB.BINARY)
+    if not LAZY_CS:
+        S = m.addVars(n+1, lb=0, vtype=g.GRB.INTEGER)  # for naive approach
 
-    S = m.addVars(n+1, lb=0, vtype=g.GRB.INTEGER)
-
-
-    #TODO: implement the lazy constraints
 
     # Model constraints
     for i in range(n+1):
-        m.addConstr(xs[i, i] == 0, name=f"v{i}{i}")                                 # no one vertex cycles
+        m.addConstr(xs[i, i] == 0, name=f"v{i}{i}")                                   # no one vertex cycles
+        # m.addConstr(xs[i, 0] == 0, name=f"v{i}{0}")                                   # no return to dummy vertex
         m.addConstr(g.quicksum(xs[i, j] for j in range(n+1)) == 1, name=f"v{i}_out")  # only one edge out
         m.addConstr(g.quicksum(xs[j, i] for j in range(n+1)) == 1, name=f"v{i}_in")   # only one edge in
 
-    LAZY_CS = False
+    # Model objective function
+    m.setObjective(g.quicksum(distances[i, j] * xs[i, j] for i in range(n+1) for j in range(n+1)), sense=g.GRB.MINIMIZE)
+
     if LAZY_CS:
-        m.setObjective(g.quicksum(distances[i, j] * xs[i, j] for j in range(n+1) for i in range(n+1)), sense=g.GRB.MINIMIZE)
         m._xs = xs
         m.Params.lazyConstraints = 1
         m.optimize(add_subtour_cstr)
-
-        a = np.zeros((n+1, n+1))
-        for i in range(n+1):
-            for j in range(n+1):
-                a[i, j] = xs[i, j].X
-        print(a)
-
-    # solve it by the classic constraints (there may be too many for the model!)
     else:
+        # naive approach w all constraints (there may be too many for the model!!)
         for i in range(n+1):
             for j in range(1, n+1):
                 m.addConstr(bigM*(1 - xs[i, j]) + S[j] >= S[i] + distances[i, j], name=f"S{i}{j}")
-
-        # # Model objective function
-        m.setObjective(g.quicksum(distances[i, j] * xs[i, j] for j in range(n+1) for i in range(n+1)), sense=g.GRB.MINIMIZE)
-
         m.optimize()
-        # m.display()
 
-        a = np.zeros((n+1, n+1))
-        for i in range(n+1):
-            for j in range(n+1):
-                a[i, j] = xs[i, j].X
-        print(a)
-
-
-        values = np.zeros(n+1)
         for i in range(n+1):
             print(f"S[{i}]: ", S[i].X)
-            values[i] = S[i].X
 
-        ordering = values[1:].argsort().argsort()
-        print("Ordering:", ordering+1)
+    print_var_arr(xs, n)
+
+    ordering = []
+    v_start = 0
+    v_next = [i for i in range(n+1) if xs[v_start, i].X > 0.5][0]
+    ordering.append(v_next)
+    while v_next != 0:
+        v_next = [i for i in range(n+1) if xs[v_next, i].X > 0.5][0]
+        ordering.append(v_next)
+
+    print("Ordering:", ordering[:-1])
+
+    with open(output_file, 'w') as f:
+        for i in range(len(ordering)-1):
+            f.write(f"{ordering[i]} ")
 
 
-        # original image
+    if __name__ == "__main__":
+
+        # plot the original image
         image = np.zeros((h, w*n, 3))
         for i in range(n):
             stripe = stripes[i].reshape(h, w, 3)
@@ -190,10 +182,10 @@ with g.Env(params=opts) as env, g.Model(env=env) as m:
         plt.show()
 
 
-        # corrected image
+        # plot the corrected image
         image = np.zeros((h, w*n, 3))
         for i in range(n):
-            idx = ordering[i]
+            idx = ordering[i]-1
             stripe = stripes[idx].reshape(h, w, 3)
             image[:, w*i:w*(i+1), :] = stripe / 255
 
