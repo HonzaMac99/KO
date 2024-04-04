@@ -42,7 +42,7 @@ def get_shortest_tour(edges):
     min_len = np.inf
     while len(edges) > 1:
         tour, edges = get_tour(edges)
-        if min_len > len(tour):             # <--- n: did mistake here
+        if min_len > len(tour):             # <--- note: did mistake here
             min_len = len(tour)
             shortest_tour = tour
     return shortest_tour
@@ -74,7 +74,7 @@ def add_subtour_cstr(model, where):
 
 def get_distances(stripes, n, w, h):
     stripes = np.array(stripes)
-    distances = np.ones((n+1, n+1)) * np.sum(stripes)*10
+    distances = np.zeros((n+1, n+1))
 
     for i in range(n+1):
         distances[0, i] = 0
