@@ -62,6 +62,14 @@ with g.Env(params=opts) as env, g.Model(env=env) as m:
                 if 0 <= i_new < b_len and 0 <= j_new < b_len:
                     m.addConstr(xs[i, j] + xs[i_new, j_new] <= 1, name=f"knight_{i}{j}")
 
+    # # examples
+    # for i in range(n+1):
+    #     for j in range(1, n+1):
+    #         m.addConstr(bigM*(1 - xs[i, j]) + S[j] >= S[i] + distances[i, j], name=f"S{i}{j}")
+    # m.setObjective(g.quicksum(distances[i, j] * xs[i, j] for i in range(n+1) for j in range(n+1)), sense=g.GRB.MINIMIZE)
+
+
+
     # Model objective function
     m.setObjective(g.quicksum(xs[i, j] for i in range(b_len) for j in range(b_len)), sense=g.GRB.MAXIMIZE)
 

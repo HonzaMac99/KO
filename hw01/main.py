@@ -30,17 +30,20 @@ def plot_shifts(x_start):
 with g.Env(params=opts) as env, g.Model(env=env) as m:
     # model = gp.Model()
 
-    input_file = sys.argv[1]
-    output_file = sys.argv[2]
 
     # # Default input parameters
     # d = [6, 6, 6, 6, 6, 8, 9, 12, 18, 22, 25, 21, 21, 20, 18, 21, 21, 24, 24, 18, 18, 18, 12, 8]
     # e = [3, 3, 3, 3, 3, 4, 4,  6,  9, 11, 12, 10, 10, 10,  9, 10, 10, 12, 12,  9,  9,  9,  6, 4]
     # D = 2
 
-    # # Default file names
-    # input_file = "in.txt"
-    # output_file = "out.txt"
+
+    # Default file names
+    if len(sys.argv) < 3:
+        input_file = "in.txt"
+        output_file = "out.txt"
+    else:
+        input_file = sys.argv[1]
+        output_file = sys.argv[2]
 
     with open(input_file, 'r') as f:
         input_data = f.read().split("\n")
@@ -55,6 +58,13 @@ with g.Env(params=opts) as env, g.Model(env=env) as m:
     zs = m.addVars(len(w), vtype=g.GRB.INTEGER, name=[f"z{i}" for i in range(len(w))])
     xs = m.addVars(len(w), vtype=g.GRB.INTEGER, name=[f"x{i}" for i in range(len(w))])
 
+    # # testing new vars
+    # x = m.addVar(vtype=g.GRB.INTEGER)
+    # y = m.addVar(vtype=g.GRB.BINARY)
+    # z = m.addVar(vtype=g.GRB.BINARY)
+    # m.addConstr(y <= x - 3)  # 1 if x >= 3
+    # m.addConstr(z <= x - 3)  # 1 if x <= 1
+
     # Model constraints
     # m.addConstrs(d[i] <= g.quicksum(xs[(i-j) % len(d)] for j in range(8)) for i in range(len(d)))
     m.addConstrs(w[i] - g.quicksum(xs[(i-j) % len(w)] for j in range(8))        <= zs[i] for i in range(len(w)))
@@ -62,8 +72,11 @@ with g.Env(params=opts) as env, g.Model(env=env) as m:
     m.addConstrs(w[i] - g.quicksum(xs[(i-j) % len(w)] for j in range(8))        <= D     for i in range(len(w)))
 
     # Model objective function
-    # m.setObjective(xs.sum(), sense=g.GRB.MINIMIZE)
-    m.setObjective(zs.sum(), sense=g.GRB.MINIMIZE)
+    m.setObjective(xs.sum(), sense=g.GRB.MINIMIZE)
+
+    # testing new vars
+    # m.addConstr(x == zs.sum())
+    # m.setObjective(x, sense=g.GRB.MINIMIZE)
 
     m.optimize()
 

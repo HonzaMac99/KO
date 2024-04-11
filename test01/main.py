@@ -23,54 +23,84 @@ with g.Env(params=opts) as env, g.Model(env=env) as m:
         input_file = sys.argv[1]
         output_file = sys.argv[2]
 
-    stripes = []
-
     with open(input_file, 'r') as f:
         input_data = f.read().split("\n")
         # [n, w, h] = list(map(int, input_data[0].split(" ")))
-        n = int(input_data[0])
+        n_rooks = int(input_data[0])
+        rooks_poses = []
 
-        for i in range(1, n+1):
+        for i in range(1, n_rooks+1):
             data = input_data[i]
-            c = ord(data[0])
-            r = int(data[1])
-            pos = [r, c]
+            r = int(data[1])-1
+            c = ord(data[0])-97
+            rooks_poses.append([r, c])
 
     # Model parameters
+    b_len = 8
     # bigM = np.sum(distances)*20
 
     # Model variables
-    xs = m.addVars(n+1, n+1, vtype=g.GRB.BINARY)
+    xs = m.addVars(b_len, b_len, vtype=g.GRB.BINARY)  # is knight
 
     # Model constraints
-    m.addConstrs(xs[i, i] == 0 for i in range(n+1))                                   # no one vertex cycles
+    for i, rook_pos in enumerate(rooks_poses):
+        r, c = rook_pos
+        m.addConstr(xs[r, c] == 0, name=f"rook{i+1}")
+        m.addConstrs(xs[r, i] == 0 for i in range(b_len))
+        m.addConstrs(xs[i, c] == 0 for i in range(b_len))
+        # m.addConstr(xs.sum(r, "*") == 0)
+        # m.addConstr(xs.sum("*", c) == 0)
 
-    # Model objective function
-    # m.setObjective(g.quicksum(distances[i, j] * xs[i, j] for i in range(n+1) for j in range(n+1)), sense=g.GRB.MINIMIZE)
+    # no mutually attacking knights
+    idxs = np.array([[1, -2], [2, -1], [2, 1], [1, 2],
+                     [-1, 2], [-2, 1], [-2, -1], [-1, -2]])
+    for i in range(b_len):
+        for j in range(b_len):
+            for k in range(idxs.shape[0]):
+                i_new = i + idxs[k, 0]
+                j_new = j + idxs[k, 1]
+                if 0 <= i_new < b_len and 0 <= j_new < b_len:
+                    m.addConstr(xs[i, j] + xs[i_new, j_new] <= 1, name=f"knight_{i}{j}")
 
+    # # examples
     # for i in range(n+1):
     #     for j in range(1, n+1):
     #         m.addConstr(bigM*(1 - xs[i, j]) + S[j] >= S[i] + distances[i, j], name=f"S{i}{j}")
+    # m.setObjective(g.quicksum(distances[i, j] * xs[i, j] for i in range(n+1) for j in range(n+1)), sense=g.GRB.MINIMIZE)
+
+
+
+    # Model objective function
+    m.setObjective(g.quicksum(xs[i, j] for i in range(b_len) for j in range(b_len)), sense=g.GRB.MAXIMIZE)
 
     m.optimize()
 
-    ordering = []
-    v_start = 0
-    v_next = [i for i in range(n+1) if xs[v_start, i].X > 0.5][0]
-    ordering.append(v_next)
-    while v_next != 0:
-        v_next = [i for i in range(n+1) if xs[v_next, i].X > 0.5][0]
-        ordering.append(v_next)
+    for i in range(b_len-1, -1, -1):
+        for j in range(b_len):
+            if [i, j] in rooks_poses:
+                print("R", end=" ")
+            elif xs[i, j].X == 1:
+                print("K", end=" ")
+            else:
+                print("-", end=" ")
+        print("")
+    print("")
 
-    print("Ordering:", ordering[:-1])
+    knight_poses = []
+    for i in range(b_len):
+        for j in range(b_len):
+            if xs[i, j].X == 1:
+                pos = chr(j+97) + str(i+1)  # <--- ch: v prohozeni i a j
+                knight_poses.append(pos)
+
+    n_knights = len(knight_poses)
+    print(n_knights)
+    for i in range(n_knights):
+        print(knight_poses[i])
 
     with open(output_file, 'w') as f:
-        for i in range(len(ordering)-1):
-            f.write(f"{ordering[i]} ")
-
-
-    if __name__ == "__main__":
-        ...
-
-
-
+        f.write(f"{n_knights}\n")
+        for i in range(n_knights-1):
+            f.write(f"{knight_poses[i]}\n")
+        if n_knights > 0:
+            f.write(f"{knight_poses[-1]}")
