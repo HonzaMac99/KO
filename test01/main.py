@@ -34,6 +34,7 @@ with g.Env(params=opts) as env, g.Model(env=env) as m:
             rock_poses.append([r, c])
 
     # Model parameters
+    b_len = 8
     # bigM = np.sum(distances)*20
 
     # Model variables
@@ -107,3 +108,4 @@ with g.Env(params=opts) as env, g.Model(env=env) as m:
         if n_dams > 0:
             f.write(f"{dam_poses[-1][0]} {dam_poses[-1][1]}\n")
             print(f"{dam_poses[-1][0]} {dam_poses[-1][1]}")
+
