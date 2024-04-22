@@ -55,7 +55,6 @@ with g.Env(params=opts) as env, g.Model(env=env) as m:
         m.addConstr(xs[r, c] == 0, name=f"rock{i+1}")
 
     # Lowering the current
-    # todo: make faster?
     bigM = 10000
     for i in range(M):
         for j in range(N):
@@ -66,6 +65,8 @@ with g.Env(params=opts) as env, g.Model(env=env) as m:
                 current -= (4-k) * xs[i-k, j]
             m.addConstr(cs[i, j] <= current, name="max_c")  # <--- ch: '==' cond makes it infeas.
             m.addConstr(cs[i, j] <= xs[i, j] * bigM, name="max_c")
+            # also possible:
+            # m.addCosntr(cs[i, j] <= c_vals[j] * xs[i, j]
 
     # # Production is 0 only when xs[i, j] is 0
     # bigM = 100
