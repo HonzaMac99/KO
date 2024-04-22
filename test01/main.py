@@ -23,6 +23,7 @@ with g.Env(params=opts) as env, g.Model(env=env) as m:
         input_file = sys.argv[1]
         output_file = sys.argv[2]
 
+    # Model parameters
     with open(input_file, 'r') as f:
         input_data = f.read().split("\n")
         [N, M, D, S, R] = list(map(int, input_data[0].split(" ")))
@@ -32,10 +33,6 @@ with g.Env(params=opts) as env, g.Model(env=env) as m:
             data = list(map(int, input_data[i].split(" ")))
             r, c = data[1], data[0]
             rock_poses.append([r, c])
-
-    # Model parameters
-    b_len = 8
-    # bigM = np.sum(distances)*20
 
     # Model variables
     xs = m.addVars(M, N, vtype=g.GRB.BINARY)  # is there a dam on [i, j]
