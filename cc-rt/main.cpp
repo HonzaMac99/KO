@@ -3,6 +3,8 @@
 #include <fstream>
 #include <string>
 #include <chrono>
+#include <vector>
+#include <bits/stdc++.h>
 
 
 // convert file line into arr of 3 ints
@@ -51,6 +53,51 @@ int** get_file_data(std::string fname, int &n_edges, int &n_verts) {
 }
 
 
+// Function to return the next random number
+int getNum(std::vector<int>& v)
+{
+ 
+    // Size of the vector
+    int n = v.size();
+ 
+    // Generate a random number
+    srand(time(NULL));
+ 
+    // Make sure the number is within
+    // the index range
+    int index = rand() % n;
+ 
+    // Get random number from the vector
+    int num = v[index];
+ 
+    // Remove the number from the vector
+    std::swap(v[index], v[n - 1]);
+    v.pop_back();
+ 
+    // Return the removed number
+    return num;
+}
+ 
+// Function to generate n non-repeating random numbers
+std::vector<int> generateRandom(int n)
+{
+    std::vector<int> v(n);
+    std::vector<int> rand_arr(n);
+ 
+    // v = [1, 2, 3, ..., n]
+    for (int i = 0; i < n; i++)
+        v[i] = i + 1;
+ 
+    // get a random number from the vector
+    for (int i = 0; i < n; i++) 
+        rand_arr[i] = getNum(v);
+
+    if(v.size()) 
+      std::cout << "Something got wrong\n";
+    return rand_arr;
+}
+
+
 int main(int argc, char* argv[]) {
   // Start measuring time
   auto t_start = std::chrono::high_resolution_clock::now();
@@ -82,15 +129,12 @@ int main(int argc, char* argv[]) {
   auto t_now = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_start);
   while(duration.count() < time_limit_ms*0.95) {
-    std::cout << "Time taken: " << duration.count() << " milliseconds" << std::endl; 
-
-
-
-
+    std::vector<int> rand_arr = generateRandom(n_verts);
 
 
     t_now = std::chrono::high_resolution_clock::now();
     duration = std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_start);
+    std::cout << "Time taken: " << duration.count() << " milliseconds" << std::endl; 
   }
 
   // clear the memory
