@@ -1,0 +1,3 @@
+/home/honzamac/cvut/m2/KO/cc-rt/build/CMakeFiles/rebuild_cache.dir
+/home/honzamac/cvut/m2/KO/cc-rt/build/CMakeFiles/edit_cache.dir
+/home/honzamac/cvut/m2/KO/cc-rt/build/CMakeFiles/cc-rt.dir

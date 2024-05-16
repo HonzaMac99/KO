@@ -1,0 +1,18 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/honzamac/cvut/m2/KO/cc-rt/11_1_chess.cpp
+iostream
+-
+cmath
+-
+cstring
+-
+vector
+-
+
