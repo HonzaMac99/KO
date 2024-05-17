@@ -1,1 +1,0 @@
-/usr/bin/c++     CMakeFiles/chess.dir/11_1_chess.cpp.o  -o chess 
