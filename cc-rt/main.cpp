@@ -6,11 +6,13 @@
 #include <vector>
 #include <algorithm>
 
+#define PRINT false
+
 
 typedef std::vector<int> Vec1D;
 typedef std::vector<std::vector<int>> Vec2D;
 
-/*//{ functions loading data */
+/*//{ data loading */
 
 // convert file line into arr of 3 ints
 int* get_int_arr(std::string file_line) {
@@ -36,41 +38,17 @@ int* get_int_arr(std::string file_line) {
 }
 
 
-int myStoi(const std::string& str) {
-  int result = 0;
-  int sign = 1;
-  size_t i = 0;
-
-  // Skip leading whitespace
-  while (i < str.size() && isspace(str[i]))
-    ++i;
-
-  // Handle sign
-  if (i < str.size() && (str[i] == '+' || str[i] == '-')) {
-    sign = (str[i++] == '-') ? -1 : 1;
-  }
-
-  // Convert digits to integer
-  for (; i < str.size(); ++i) {
-    if (!isdigit(str[i])) {
-      throw std::invalid_argument("Invalid input");
-    }
-    result = result * 10 + (str[i] - '0');
-  }
-  return sign * result;
-}
-
-
 // extract the edges from the file into a 2D array
 int** get_file_data(std::string fname, int &n_verts, int &n_edges) {
 
-  std::fstream F(fname);
+  std::ifstream F(fname);
   std::string f_line;
    
   std::getline(F, f_line);
-  // n_edges = std::stoi(f_line); 
-  n_edges = myStoi(f_line); 
-  std::cout << "n_edges: " << n_edges << std::endl;
+  n_edges = std::stoi(f_line); 
+
+  if (PRINT) 
+    std::cout << "n_edges: " << n_edges << std::endl;
 
   int **data = new int *[n_edges];
   int *num_array;
@@ -94,7 +72,7 @@ int** get_file_data(std::string fname, int &n_verts, int &n_edges) {
 
 /*//}*/
 
-/*//{ rand gen functions */
+/*//{ rand permutations gen */
 
 int getRandNum(int n) {
     auto t_now = std::chrono::high_resolution_clock::now().time_since_epoch();
@@ -137,7 +115,7 @@ std::vector<int> generatePrmt(int n)
 }
 /*//}*/
 
-
+/*//{ graph functions */
 Vec2D create_adj(int **data, int n_v, int n_e) {
   Vec2D adj(n_v);
   for (int i = 0; i < n_e; i++) {
@@ -146,12 +124,14 @@ Vec2D create_adj(int **data, int n_v, int n_e) {
     adj[v_s].push_back(v_t);
   }
 
-  std::cout << n_v << " vertices" << std::endl;
-  for(int i = 0; i < n_v; i++) {
-    std::cout << i << ": [";
-    for (size_t j = 0; j < adj[i].size()-1; j++) 
-      std::cout << adj[i][j] << ", ";
-    std::cout << adj[i][adj[i].size()-1] << "]" << std::endl;
+  if (PRINT) {
+    std::cout << "n_vertices: " << n_v << std::endl;
+    for(int i = 0; i < n_v; i++) {
+      std::cout << i << ": [";
+      for (size_t j = 0; j < adj[i].size()-1; j++) 
+        std::cout << adj[i][j] << ", ";
+      std::cout << adj[i][adj[i].size()-1] << "]" << std::endl;
+    }
   }
   return adj;
 }
@@ -210,6 +190,7 @@ int rm_cycles(Vec2D &rm_edges, const Vec1D top_ord, int **data, int n_e) {
   }
   return total_cost;
 }
+/*//}*/
 
 
 int main(int argc, char* argv[]) {
@@ -217,25 +198,28 @@ int main(int argc, char* argv[]) {
 
   std::string file_in  = "/home/honzamac/cvut/m2/KO/cc-rt/files/in.txt";
   std::string file_out = "/home/honzamac/cvut/m2/KO/cc-rt/files/out.txt";
-  double time_limit    = 10.0;  // [s]
+  double time_limit    = 1.0;  // [s]
 
   if (argc > 1) file_in    = argv[1];
   if (argc > 2) file_out   = argv[2];
   if (argc > 3) time_limit = std::stod(argv[3]);
 
+  std::cout << "TIME LIMIT: " << time_limit << "s" << std::endl;
   double time_limit_ms = time_limit*1000.0;
 
   int **data, n_edges = 0, n_verts = 0;
   data = get_file_data(file_in, n_verts, n_edges);
   Vec2D adj = create_adj(data, n_verts, n_edges);
 
+  // double print_limit_ms = 13.0 * (n_edges / 10000.0); 
+
   int best_total_cost = std::numeric_limits<int>::max();
   Vec2D best_rm_edges;
-  Vec1D best_top_ord;
+  // Vec1D best_top_ord;
 
   auto t_now = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_start);
-  while(duration.count() < time_limit_ms*0.95) {
+  do {  
     int total_cost;
     Vec2D rm_edges;
 
@@ -247,20 +231,25 @@ int main(int argc, char* argv[]) {
       std::cout << "new_best_cost: " << total_cost << std::endl;
       best_total_cost = total_cost;
       best_rm_edges = rm_edges;
-      best_top_ord = top_ord;
+      // best_top_ord = top_ord;
     }
 
     t_now = std::chrono::high_resolution_clock::now();
     duration = std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_start);
     // std::cout << "Time taken: " << duration.count() << " milliseconds" << std::endl; 
+  } 
+  while(duration.count() < time_limit_ms*0.95);
+
+  if (PRINT) {
+    std::cout << best_total_cost << std::endl;
+    for(int i = 0; i < (int)best_rm_edges.size(); i++) 
+      std::cout << best_rm_edges[i][0]+1 << " " << best_rm_edges[i][1]+1 << std::endl;
   }
 
   std::ofstream F_out(file_out);
   F_out << best_total_cost << std::endl;
-  std::cout << best_total_cost << std::endl;
   for(int i = 0; i < (int)best_rm_edges.size(); i++) {
     F_out << best_rm_edges[i][0]+1 << " " << best_rm_edges[i][1]+1 << std::endl;
-    std::cout << best_rm_edges[i][0]+1 << " " << best_rm_edges[i][1]+1 << std::endl;
   }
   F_out.close();
 
