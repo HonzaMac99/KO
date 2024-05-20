@@ -123,7 +123,7 @@ def build_tree(s_arr, s_prt, t_unsched, c):
 if __name__ == "__main__":
     if len(sys.argv) < 3:
         # Default file names
-        input_file = "in3.txt"
+        input_file = "in.txt"
         output_file = "out.txt"
     else:
         input_file = sys.argv[1]
@@ -156,13 +156,13 @@ if __name__ == "__main__":
             f.write(f"-1\n")
         else:
             start_times = np.zeros((n_tasks), dtype=int)
-            sol_1 = np.array(s_arr[0])
+            sol_best = np.array(s_arr[-1])
 
             t_cur = 0
-            for task in sol_1:
-                [pi, id] = task[[0, 3]]
-                start_times[id-1] = t_cur
-                t_cur += pi
+            for task in sol_best:
+                [pi, ri, di, id] = task
+                start_times[id-1] = max(t_cur, ri)
+                t_cur = max(t_cur, ri) + pi
 
             for i in range(len(start_times)):
                 f.write(f"{start_times[i]}\n")
