@@ -24,8 +24,8 @@ class Graph:
 
     def dfs(self, start, visited, path = None, capacity = None):
         visited.append(start)
-        if self.counter >= 277:
-            print(self.counter2)
+        # if self.counter >= 277:
+        #     print(self.counter2)
         if capacity is None:
             capacity = []
         if start != self.num_nodes-1:
@@ -80,13 +80,16 @@ class Graph:
         d =  self.body[:,:,ld_ori_id]
 
         while True:
-            print(self.counter)
-            self.counter += 1
-            if self.counter == 277:
-                print(4)
+            # print(self.counter)
+            # self.counter += 1
+            # if self.counter == 277:
+            #     print(4)
             self.capacity = None
             self.path = None
             self.dfs(self.num_nodes-2,[],[self.num_nodes-2])
+
+            print(self.path)
+
             if self.path and self.capacity and min(self.capacity) > 0:
                 self.capacity = min(self.capacity)
                 c = self.body[:, :, f_id]
@@ -188,6 +191,8 @@ class Graph:
         self.body[self.body < 0] = - infinity
         self.num_nodes += 2
         print("finished transform")
+        # ok
+
 
 
 def load_data(path2file):
@@ -230,19 +235,18 @@ if __name__ == '__main__':
 
     if len(sys.argv) < 3:
         # Default file names
-        path2input_file = "in2.txt"
+        path2input_file = "in.txt"
         path2output_file = "out.txt"
     else:
         path2input_file = sys.argv[1]
         path2output_file = sys.argv[2]
 
-    g = load_data(path2input_file)                      # OK
-    g_original = load_data(path2input_file)             # OK 1:00
+    g = load_data(path2input_file)
+    g_original = load_data(path2input_file)
 
-    print(g.body[:, :, 0])
 
-    g.transform()                                       # OK 3:23
-    g.init_flow()                                       # P
+    g.transform()
+    g.init_flow()
     g.ford_fulkerson()
     result =g.body[:,:,f_id] + g.body[:,:,ld_ori_id]
 

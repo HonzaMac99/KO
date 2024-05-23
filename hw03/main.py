@@ -23,6 +23,9 @@ INF = 10000
 
 # function for dfs search
 def construct_path(G, visited, start_id, path, cap):
+    global path_sol
+    global cap_sol
+
     visited.append(start_id)
 
     t_new_id = n_nodes-1
@@ -35,7 +38,7 @@ def construct_path(G, visited, start_id, path, cap):
 
         # there must be empty room for some more flow
         empty = G[start_id, nodes_f, 1] < G[start_id, nodes_f, 2]
-        nodes_id_forward = nodes_f[empty]
+        nodes_f = nodes_f[empty]
 
         # check the backward connections
         nodes_b = np.where(G[:, start_id, 2] >= 0)[0]
@@ -44,9 +47,9 @@ def construct_path(G, visited, start_id, path, cap):
 
         # there must be empty room for lowering the flow
         empty = G[nodes_b, start_id, 1] > G[nodes_b, start_id, 0]
-        nodes_id_backward = nodes_b[empty]
+        nodes_b = nodes_b[empty]
 
-        for node in nodes_id_forward:
+        for node in nodes_f:
             u_i = G[start_id, node, 2]
             f_i = G[start_id, node, 1]
 
@@ -54,11 +57,11 @@ def construct_path(G, visited, start_id, path, cap):
             cap_new = cap + [u_i - f_i]
 
             construct_path(G, visited, node, path_new, cap_new)
-            if cap:
+            if cap_sol:
                 break
 
-        if cap is None:
-            for node in nodes_id_backward:
+        if cap_sol is None:
+            for node in nodes_b:
                 l_i = G[node, start_id, 0]
                 f_i = G[node, start_id, 1]
 
@@ -66,14 +69,17 @@ def construct_path(G, visited, start_id, path, cap):
                 cap_new = cap + [f_i - l_i]
 
                 construct_path(G, visited, node, path_new, cap_new)
-                if cap:
+                if cap_sol:
                     break
+    else:
+        cap_sol = cap
+        path_sol = path
 
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
         # Default file names
-        input_file = "in2.txt"
+        input_file = "in.txt"
         output_file = "out.txt"
     else:
         input_file = sys.argv[1]
@@ -84,16 +90,16 @@ if __name__ == "__main__":
         [n_cust, n_prod] = list(map(int, input_data[0].split(" ")))
         n_nodes = n_cust + n_prod + 2
 
-        # s_id = 0
         s_id = n_nodes-2
+        # s_id = 0
         t_id = n_nodes-1
 
-        # will be added later to the graph
+        # will be part of the the extended graph
         s_new_id = n_nodes
         t_new_id = n_nodes + 1
         n_nodes += 2
 
-        G = np.ones((n_nodes, n_nodes, 3)) * -1   # -INF
+        G = np.ones((n_nodes, n_nodes, 3)) * -1   # * -INF
 
         for i in range(n_cust):
             c_id = i
@@ -113,8 +119,6 @@ if __name__ == "__main__":
 
     # step 1 - compute balances
     G[t_id, s_id, :] = [0, -1, INF]
-
-    print(G[:-2, :-2, 0])
 
     enabled = G[:, :, 0] >= 0
     l_in_arr = np.sum(G[:, :, 0]*enabled, axis=0)
@@ -144,22 +148,28 @@ if __name__ == "__main__":
     while True:
         path = []
         visited = []
-        capacities = []
-
+        caps = []  # capacities
         start_id = s_new_id
         path.append(start_id)
-        construct_path(G, visited, start_id, path, capacities)
 
-        if path and capacities and min(capacities) > 0:
-            cap_min = min(capacities)
+        cap_sol = None
+        path_sol = None
+        construct_path(G, visited, start_id, path, caps)
+
+        cap_sol = cap_sol if cap_sol is not None else []
+        path_sol = path_sol if path_sol is not None else []
+
+        print(path_sol)
+        if path_sol and cap_sol and min(cap_sol) > 0:
+            path_cap = min(cap_sol)
             for i in range(len(path)-1):
                 u_id = path[i]
                 v_id = path[i+1]
 
                 if G[u_id, v_id, 0] < 0:
-                    G[v_id, u_id, 1] -= cap_min
+                    G[v_id, u_id, 1] -= path_cap  # edge goes backwards
                 else:
-                    G[u_id, v_id, 1] += cap_min
+                    G[u_id, v_id, 1] += path_cap  # edge goes forwards
         else:
             break
 
