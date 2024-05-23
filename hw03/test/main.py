@@ -89,6 +89,7 @@ class Graph:
             self.dfs(self.num_nodes-2,[],[self.num_nodes-2])
 
             print(self.path)
+            # print(self.capacity)
 
             if self.path and self.capacity and min(self.capacity) > 0:
                 self.capacity = min(self.capacity)
@@ -188,11 +189,10 @@ class Graph:
         self.body[:,:,u_id] = self.body[:,:,u_id] - self.body[:,:,l_id]
         self.body[:,:,l_id][self.body[:,:,l_id] > 0] = 0
         self.body[:, :, u_id][self.body[:, :, l_id] != 0] = -1
-        self.body[self.body < 0] = - infinity
+        self.body[self.body < 0] = -1 # - infinity
         self.num_nodes += 2
         print("finished transform")
         # ok
-
 
 
 def load_data(path2file):
@@ -227,6 +227,7 @@ def safe_result(path2file,res):
             for r in res:
                 indices = np.where(r == 1)[0] + 1
                 if indices.size != 0:            # Get the indices where the value is equal to 1
+                    print(' '.join(map(str, indices)))
                     f.write(' '.join(map(str, indices)) + '\n')
     f.close()
 
@@ -249,10 +250,14 @@ if __name__ == '__main__':
     g.init_flow()
     g.ford_fulkerson()
     result =g.body[:,:,f_id] + g.body[:,:,ld_ori_id]
+    print(result)
 
     g_original.init_flow(result[:-2,:-2])
+    a = g_original.body[:, :, 1].copy()
     g_original.ford_fulkerson()
+    b = g_original.body[:, :, 1]
     r = g_original.prepare_result()
-    safe_result(path2output_file,r)
+    print(r)
+    safe_result(path2output_file, r)
 
     print("end")
